@@ -10,3 +10,8 @@ I hope to have a complete implementation eventually but for now I will mostly fi
 Contributions are of course always welcome.
 
 The code is very similar to the javascript implementation in the Chrome plugin [ChromeIPass](https://github.com/pfn/passifox) since I used it as a reference.
+
+python-keepasshttpc  Copyright (C) 2015  Florian Merkel
+This program comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it under certain conditions.
+See LICENSE.md for details.
