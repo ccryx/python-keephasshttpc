@@ -5,16 +5,11 @@ from os.path import expanduser
 from Crypto.Cipher import AES
 from Crypto import Random
 
-associated = False
-isDatabaseClosed = False
-isKeepassHttpAvailable = False
-isEncryptionKeyUnrecognized = False
 currentKeePassHttp = {'version':0, 'versionParsed':0}
 
-keySize = 32;
+key_size = 32;
 pluginUrl= 'http://localhost:19455'
 latestVersionUrl = 'https://passifox.appspot.com/kph/latest-version.txt'
-cacheTimeout = 30 * 1000 # milliseconds
 
 ##########################################
 # Helper functions
@@ -146,7 +141,7 @@ def associate():
     """Associate with KeepassHTTP
 
     """
-    key = Random.get_random_bytes(32)
+    key = Random.get_random_bytes(key_size)
     #request = {'RequestType': 'associate'}
     request = {'RequestType': 'associate', 'Key': base64.standard_b64encode(key).decode('utf-8')}
     info = set_verifier(request, key)
@@ -155,9 +150,6 @@ def associate():
         if verify_response(response, key):
             identifier = response['Id']
             set_crypto_key(identifier, key)
-            associated = True
-        else:
-            associated = False
 
 
 def set_verifier(request, inkey=None):
