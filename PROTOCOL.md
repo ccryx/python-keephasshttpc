@@ -15,7 +15,7 @@ The values of all fields are utf-8 strings.
 |generate-password|Id, Nonce, Verifier     |             |Genere a password (using the most recently used password generator settings?).                              |
 |set-login        |Id, Nonce, Verifier, Url|             |No idea yet.                                                                                                |
 
-The requests are described in more detail in the following paragraphs.
+The requests are described in more detail in the following paragraphs.  
 The Nonce and Verifier keys used in every request are necessary for encrypting/decrypting encrypted fields.
 KeePassHttp uses the AES CBC mode which requires an initialization vector (IV) for encryption and decryption.
 The 16 byte long IV is randomly generated for each request encoded with base64 and sent as the value for the `Nonce` key.
