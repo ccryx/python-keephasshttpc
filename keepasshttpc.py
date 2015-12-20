@@ -19,18 +19,6 @@ cacheTimeout = 30 * 1000 # milliseconds
 ##########################################
 # Helper functions
 ##########################################
-def to_s(byte_array):
-    s = ''
-    for b in byte_array:
-        s = s + chr(b)
-    return s
-
-def to_b(chars):
-    b = []
-    for c in chars:
-        b = b + [ord(c)]
-    return b
-
 def aes_pad(plaintext):
     pad_len = 16-len(plaintext) % 16
     pad_chr = chr(pad_len)
@@ -54,11 +42,9 @@ def decrypt(crypttext, key, iv):
 
 
 def decryptEntry(entry, key, iv):
-    print('entry: '+str(entry))
-    entry['Uuid'] = decrypt(base64.standard_b64decode(entry['Uuid']), key, iv)
-    entry['Name'] = decrypt(base64.standard_b64decode(entry['Name']), key, iv)
-    entry['Login'] = decrypt(base64.standard_b64decode(entry['Login']), key, iv)
-    entry['Password'] = decrypt(base64.standard_b64decode(entry['Password']), key, iv)
+    for k,v in entry.items():
+        if k is not 'StringFields':
+            entry[k] = decrypt(base64.b64decode(v), key, iv)
 
     if 'StringFields' in entry:
         fields = []
@@ -74,14 +60,15 @@ def set_current_KeePassHttp_version(version):
         currentKeePassHttp['version'] = version
         currentKeePassHttp['versionParsed'] = int(version.replace('.',''))
 
+
 def retrieve_credentials(url, submiturl=None, triggerUnlock=False):
     if not test_associate(triggerUnlock):
-        return
+        return None
 
     request = {'RequestType': 'get-logins', 'SortSelection': True, 'TriggerUnlock': triggerUnlock}
     info = set_verifier(request)
     if info is None:
-        return
+        return None
     [identifier, key] = info
     iv64 = request['Nonce']
     iv = base64.b64decode(iv64.encode('utf-8'))
@@ -92,6 +79,7 @@ def retrieve_credentials(url, submiturl=None, triggerUnlock=False):
         request['SubmitUrl'] = base64.b63encode(encrypt(submiturl, key, iv)).decode('utf-8')
 
     response = send(request)
+
     entries = []
 
     if response is not None:
@@ -101,7 +89,36 @@ def retrieve_credentials(url, submiturl=None, triggerUnlock=False):
             iv_r = base64.b64decode(iv64_r.encode('utf-8'))
 
             for e in response['Entries']:
-                print(str(e))
+                decryptEntry(e, key, iv_r)
+
+            entries = response['Entries']
+
+    return entries
+
+
+def get_all_logins(triggerUnlock=False):
+    if not test_associate(triggerUnlock):
+        return None
+
+    request = {'RequestType': 'get-all-logins', 'SortSelection': True, 'TriggerUnlock': triggerUnlock}
+    info = set_verifier(request)
+    if info is None:
+        return None
+    [identifier, key] = info
+    iv64 = request['Nonce']
+    iv = base64.b64decode(iv64.encode('utf-8'))
+
+    response = send(request)
+
+    entries = []
+
+    if response is not None:
+        set_current_KeePassHttp_version(response['Version'])
+        if verify_response(response, key, identifier):
+            iv64_r = response['Nonce']
+            iv_r = base64.b64decode(iv64_r.encode('utf-8'))
+
+            for e in response['Entries']:
                 decryptEntry(e, key, iv_r)
 
             entries = response['Entries']
@@ -118,10 +135,11 @@ def test_associate(triggerUnlock = False):
     [identifier, key] = info
 
     response = send(request)
-    if verify_response(response, key, identifier):
-        return True
-    else:
-        return False
+    if response is not None:
+        if verify_response(response, key, identifier):
+            return True
+        else:
+            return False
 
 
 def associate():
@@ -131,15 +149,15 @@ def associate():
     key = Random.get_random_bytes(32)
     #request = {'RequestType': 'associate'}
     request = {'RequestType': 'associate', 'Key': base64.standard_b64encode(key).decode('utf-8')}
-    set_verifier(request, key)
+    info = set_verifier(request, key)
     response = send(request)
-    identifier = response['Id']
-    valid = verify_response(response, key)
-    if (verify_response(response, key)):
-        set_crypto_key(identifier, key)
-        associated = True
-    else:
-        associated = False
+    if response is not None:
+        if verify_response(response, key):
+            identifier = response['Id']
+            set_crypto_key(identifier, key)
+            associated = True
+        else:
+            associated = False
 
 
 def set_verifier(request, inkey=None):
@@ -152,11 +170,9 @@ def set_verifier(request, inkey=None):
             #TODO: proper execption handling
             return None
         [identifier, key] = info
+        request['Id'] = identifier
     else:
         key = inkey
-
-    if identifier is not None:
-        request['Id'] = identifier
 
     iv = Random.new().read(AES.block_size)
     iv64str = base64.b64encode(iv).decode('utf-8')
@@ -181,7 +197,7 @@ def verify_response(response, key, identifier=None):
 def get_crypto_key():
     identifier = None
     key = None
-#TODO: define this path somewhere else
+    #TODO: define this path somewhere else
     path = expanduser('~') + '/.kphttpc/key'
     try:
         with open(path) as keyfile:
@@ -212,5 +228,7 @@ def send(request):
             response_bytes = res.read()
             response = json.loads(response_bytes.decode('utf-8'))
     except urllib.error.HTTPError as e:
-        print('code: '+str(e.code)+'\nreason:'+e.reason+'\n'+str(e.headers))
+        print('code: '+str(e.code)+'\nreason:'+e.reason+'\n'+str(e.headers), file=sys.stderr)
+    except urllib.error.URLError as e:
+        print('error: '+str(e.reason), file=sys.stderr)
     return response
