@@ -1,16 +1,10 @@
-import json
-import urllib.request
-import base64
-import sys
+import argparse
 
-from os.path import expanduser
-
-from Crypto.Cipher import AES
-from Crypto import Random
+from protocol import (test_associate, associate, retrieve_credentials,
+                      get_all_logins)
 
 currentKeePassHttp = {'version': 0, 'versionParsed': 0}
 
-key_size = 32
 pluginUrl = 'http://localhost:19455'
 latestVersionUrl = 'https://passifox.appspot.com/kph/latest-version.txt'
 
@@ -18,42 +12,6 @@ latestVersionUrl = 'https://passifox.appspot.com/kph/latest-version.txt'
 ##########################################
 # Helper functions
 ##########################################
-def aes_pad(plaintext):
-    pad_len = 16-len(plaintext) % 16
-    pad_chr = chr(pad_len)
-    return plaintext + (pad_chr * pad_len)
-
-
-def aes_unpad(plaintext):
-    pad_len = ord(plaintext[-1])
-    if pad_len <= 16:
-        return plaintext[:-pad_len]
-    else:
-        return plaintext
-
-
-def encrypt(plaintext, key, iv):
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    return cipher.encrypt(aes_pad(plaintext))
-
-
-def decrypt(crypttext, key, iv):
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    return aes_unpad(cipher.decrypt(crypttext).decode('utf-8'))
-
-
-def decryptEntry(entry, key, iv):
-    for k, v in entry.items():
-        if k is not 'StringFields':
-            entry[k] = decrypt(base64.b64decode(v), key, iv)
-
-    if 'StringFields' in entry:
-        fields = []
-        for field in entry['StringFields']:
-            field['Key'] = decrypt(field['Key'], key, iv, True)
-            field['Value'] = decrypt(field['Value'], key, iv, True)
-            fields = fields + [field]
-        entry['StringFields'] = fields
 
 
 def set_current_KeePassHttp_version(version):
@@ -62,179 +20,62 @@ def set_current_KeePassHttp_version(version):
         currentKeePassHttp['versionParsed'] = int(version.replace('.', ''))
 
 
-def retrieve_credentials(url, submiturl=None, triggerUnlock=False):
-    if not test_associate(triggerUnlock):
-        return None
+def main(args):
+    if 'info' == args.command:
+        print('executing command ' + args.command)
 
-    request = {'RequestType': 'get-logins',
-               'SortSelection': True,
-               'TriggerUnlock': triggerUnlock}
-    info = set_verifier(request)
-    if info is None:
-        return None
-    [identifier, key] = info
-    iv64 = request['Nonce']
-    iv = base64.b64decode(iv64.encode('utf-8'))
+    elif 'test-associate' == args.command:
+        print(test_associate(args.unlock))
 
-    request['Url'] = base64.b64encode(encrypt(url, key, iv)).decode('utf-8')
+    elif 'associate' == args.command:
+        print(associate())
 
-    if submiturl is not None:
-        request['SubmitUrl'] = base64.b64encode(
-            encrypt(submiturl, key, iv)).decode('utf-8')
-
-    response = send(request)
-
-    entries = []
-
-    if response is not None:
-        set_current_KeePassHttp_version(response['Version'])
-        if verify_response(response, key, identifier):
-            iv64_r = response['Nonce']
-            iv_r = base64.b64decode(iv64_r.encode('utf-8'))
-
-            for e in response['Entries']:
-                decryptEntry(e, key, iv_r)
-
-            entries = response['Entries']
-
-    return entries
-
-
-def get_all_logins(triggerUnlock=False):
-    if not test_associate(triggerUnlock):
-        return None
-
-    request = {'RequestType': 'get-all-logins',
-               'SortSelection': True,
-               'TriggerUnlock': triggerUnlock}
-    info = set_verifier(request)
-    if info is None:
-        return None
-    [identifier, key] = info
-    # iv64 = request['Nonce']
-    # iv = base64.b64decode(iv64.encode('utf-8'))
-
-    response = send(request)
-
-    entries = []
-
-    if response is not None:
-        set_current_KeePassHttp_version(response['Version'])
-        if verify_response(response, key, identifier):
-            iv64_r = response['Nonce']
-            iv_r = base64.b64decode(iv64_r.encode('utf-8'))
-
-            for e in response['Entries']:
-                decryptEntry(e, key, iv_r)
-
-            entries = response['Entries']
-
-    return entries
-
-
-def test_associate(triggerUnlock=False):
-    request = {'RequestType': 'test-associate', 'TriggerUnlock': triggerUnlock}
-    info = set_verifier(request)
-    if info is None:
-        return False
-
-    [identifier, key] = info
-
-    response = send(request)
-    if response is not None:
-        if verify_response(response, key, identifier):
-            return True
+    elif 'get-logins' == args.command:
+        if args.url is not None:
+            for u in args.url:
+                print(retrieve_credentials(u,
+                                           args.submiturl,
+                                           args.unlock))
         else:
-            return False
+            print('No Url was given')
 
+    elif 'get-all-logins' == args.command:
+        print(get_all_logins(args.unlock))
 
-def associate():
-    """Associate with KeepassHTTP
+    elif 'get-logins-count' == args.command:
+        print(args.command + ': not implemented')
 
-    """
-    key = Random.get_random_bytes(key_size)
-    request = {'RequestType': 'associate',
-               'Key': base64.standard_b64encode(key).decode('utf-8')}
-    # info = set_verifier(request, key)
-    response = send(request)
-    if response is not None:
-        if verify_response(response, key):
-            identifier = response['Id']
-            set_crypto_key(identifier, key)
+    elif 'generate-password' == args.command:
+        print(args.command + ': not implemented')
 
+    elif 'set-login' == args.command:
+        print(args.command + ': not implemented')
 
-def set_verifier(request, inkey=None):
-    identifier = None
-    key = None
-    if inkey is None:
-        # happens when we don't want to associate
-        info = get_crypto_key()
-        if info is None:
-            # TODO: proper execption handling
-            return None
-        [identifier, key] = info
-        request['Id'] = identifier
-    else:
-        key = inkey
+    elif 'info' == args.command:
+        print(args.command + ': not implemented')
 
-    iv = Random.new().read(AES.block_size)
-    iv64str = base64.b64encode(iv).decode('utf-8')
-    request['Nonce'] = iv64str
-    request['Verifier'] = base64.b64encode(
-        encrypt(iv64str, key, iv)).decode('utf-8')
-    return [identifier, key]
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Communicate with a ' +
+                                     'KeePassHTTP server.')
 
-
-def verify_response(response, key, identifier=None):
-    if not response['Success']:
-        return False
-
-    iv = base64.b64decode(response['Nonce'].encode('utf-8'))
-    crypted = base64.b64decode(response['Verifier'])
-    value = decrypt(crypted, key, iv)
-    valid = value == response['Nonce']
-    if identifier is not None:
-        valid = valid and identifier == response['Id']
-    return valid
-
-
-def get_crypto_key():
-    identifier = None
-    key = None
-    # TODO: define this path somewhere else
-    path = expanduser('~') + '/.kphttpc/key'
-    try:
-        with open(path) as keyfile:
-            lines = keyfile.readlines()
-            identifier = lines[0][:-1]
-            key = base64.b64decode(lines[1][:-1].encode('utf-8'))
-    except FileNotFoundError:
-        # TODO: handle more io errors
-        return None
-    return [identifier, key]
-
-
-def set_crypto_key(identifier, key):
-    path = expanduser('~') + '/.kphttpc/key'
-    with open(path, 'w') as keyfile:
-        keyfile.write(identifier+'\n')
-        keyfile.write(base64.b64encode(key).decode('utf-8')+'\n')
-
-
-def send(request):
-    headers = {}
-    headers['Content-Type'] = 'application/json'
-    request_bytes = json.dumps(request).encode('utf-8')
-    req = urllib.request.Request(pluginUrl, request_bytes, headers)
-    response = None
-    try:
-        with urllib.request.urlopen(req) as res:
-            response_bytes = res.read()
-            response = json.loads(response_bytes.decode('utf-8'))
-    except urllib.error.HTTPError as e:
-        print('code: ' + str(e.code) + '\n' +
-              'reason:'+e.reason+'\n' +
-              str(e.headers), file=sys.stderr)
-    except urllib.error.URLError as e:
-        print('error: '+str(e.reason), file=sys.stderr)
-    return response
+    parser.add_argument('--command', default='info',
+                        choices=['test-associate',
+                                 'associate',
+                                 'get-logins',
+                                 'get-all-logins',
+                                 'get-logins-count',
+                                 'generate-password',
+                                 'set-login',
+                                 'info'],
+                        required=True)
+    parser.add_argument('--url', action='append')
+    parser.add_argument('--submiturl', action='append')
+    parser.add_argument('--unlock', action='store_true')
+    # * test-associate(): True or False, possibly some more info
+    # * get-logins(Url [,SubmitUrl]): JSON Array with logins matching Url
+    # * get-all-logins(): JSON Array with all logins (no passwords)
+    # * get-logins-count: Integer with the number of logins matching Url
+    # * generate-password: the generated password
+    # * set-login: No idea
+    args = parser.parse_args()
+    main(args)
