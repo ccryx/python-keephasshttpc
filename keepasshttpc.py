@@ -6,24 +6,39 @@ from keepasshttpc.protocol import (test_associate, associate,
                                    retrieve_credentials, get_all_logins)
 
 
+def add_default_info(creds, out):
+    out['name'] = creds['Name']
+    out['login'] = creds['Login']
+    out['password'] = creds['Password']
+
+
+def print_relevant_info(info, creds):
+    print(creds[info[0].upper()+info[1:]])
+
+
+def add_relevant_info(info, creds, out):
+    if 'name' in info:
+        out['name'] = creds['Name']
+    if 'login' in info:
+        out['login'] = creds['Login']
+    if 'password' in info:
+        out['password'] = creds['Password']
+    if 'uuid' in info:
+        out['uuid'] = creds['Uuid']
+
+
 def do_get_logins(args):
     output = []
     creds = retrieve_credentials(args.url, triggerUnlock=args.unlock)
     for c in creds:
         o = {}
         if args.info is None:
-            o['name'] = c['Name']
-            o['login'] = c['Login']
-            o['password'] = c['Password']
+            add_default_info(c, o)
+        elif len(args.info) == 1:
+            print_relevant_info(args.info[0], c)
+            return
         else:
-            if 'name' in args.info:
-                o['name'] = c['Name']
-            if 'login' in args.info:
-                o['login'] = c['Login']
-            if 'password' in args.info:
-                o['password'] = c['Password']
-            if 'uuid' in args.info:
-                o['uuid'] = c['Uuid']
+            add_relevant_info(args.info, c, o)
         output.append(o)
     if len(output) == 1:
         print(output[0])
@@ -52,7 +67,10 @@ if __name__ == "__main__":
 
     parser_get_logins = subparsers.add_parser('get-logins')
     parser_get_logins.add_argument('--info',
-                                   choices=['name', 'user', 'password', 'uuid'],
+                                   choices=['login',
+                                            'user',
+                                            'password',
+                                            'uuid'],
                                    action='append')
     parser_get_logins.add_argument('url')
     parser_get_logins.set_defaults(func=do_get_logins)
