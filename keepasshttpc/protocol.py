@@ -3,8 +3,8 @@ import json
 import urllib.request
 import base64
 
-import cryptohelpers as ch
-import configuration as cfg
+import keepasshttpc.cryptohelpers as ch
+import keepasshttpc.configuration as cfg
 
 
 def send(request, plugin_url='http://localhost:19455'):
