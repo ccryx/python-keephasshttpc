@@ -12,7 +12,17 @@ Contributions are of course always welcome.
 The code is very similar to the javascript implementation in the Chrome plugin [ChromeIPass](https://github.com/pfn/passifox) since I used it as a reference.
 
 
-python-keepasshttpc  Copyright (C) 2015  Florian Merkel.  
-This program comes with ABSOLUTELY NO WARRANTY.  
-This is free software, and you are welcome to redistribute it under certain conditions. 
-See LICENSE.md for details.
+python-keepasshttpc - communicate with a keepasshttp server
+Copyright (C) 2015-2016  Florian Merkel
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 3 of the License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.

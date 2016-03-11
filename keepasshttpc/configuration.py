@@ -1,6 +1,4 @@
-import base64
-
-#   keepasshttpc - communicate with a keepasshttp server
+#   python-keepasshttpc - communicate with a keepasshttp server
 #   Copyright (C) 2015-2016  Florian Merkel
 #
 #   This program is free software: you can redistribute it and/or modify
@@ -14,6 +12,8 @@ import base64
 #
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import base64
 
 from os.path import expanduser
 

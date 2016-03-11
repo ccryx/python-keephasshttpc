@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-#   keepasshttpc - communicate with a keepasshttp server
+#   python-keepasshttpc - communicate with a keepasshttp server
 #   Copyright (C) 2015-2016  Florian Merkel
 #
 #   This program is free software: you can redistribute it and/or modify
