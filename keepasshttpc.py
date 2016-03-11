@@ -34,15 +34,17 @@ def do_get_logins(args):
         o = {}
         if args.info is None:
             add_default_info(c, o)
+            output.append(o)
         elif len(args.info) == 1:
             print_relevant_info(args.info[0], c)
-            return
+            # return
         else:
             add_relevant_info(args.info, c, o)
-        output.append(o)
+            output.append(o)
+
     if len(output) == 1:
         print(output[0])
-    else:
+    elif len(output) > 1:
         print(output)
 
 
@@ -68,7 +70,7 @@ if __name__ == "__main__":
     parser_get_logins = subparsers.add_parser('get-logins')
     parser_get_logins.add_argument('--info',
                                    choices=['login',
-                                            'user',
+                                            'name',
                                             'password',
                                             'uuid'],
                                    action='append')
