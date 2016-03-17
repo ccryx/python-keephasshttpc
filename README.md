@@ -11,6 +11,20 @@ Contributions are of course always welcome.
 
 The code is very similar to the javascript implementation in the Chrome plugin [ChromeIPass](https://github.com/pfn/passifox) since I used it as a reference.
 
+## Dependencies
+python-keepasshttpc requires **python 3** and **pycrypto**. I am personally using it with python 3.5 and pycrypto 2.6.1.
+
+## Installation
+Until python-keepasshttpc becomes an installable package you can use the following isntructions to install it.
+
+1. `git clone https://github.com/ccryx/python-keephasshttpc.git`
+2. `cd python-keepasshttpc`
+3. `mkdir -p ~/.local/lib/python3.5/site-packages`
+4. `cp -r keepasshttpc ~/.local/lib/python3.5/site-packages/`<sup>1</sup>
+5. `cp keepasshttpc.py ~/bin` (optional)<sup>2</sup>
+
+Note 1: This is your user's `site-packages` path. See [Installing Python Modules (Legacy version)]{https://docs.python.org/3.5/install/} and [PEP 0370]{https://www.python.org/dev/peps/pep-0370/} for more information.
+Note 2: This assumes that `~/bin` is on your PATH. You can place the `keepasshttpc.py` script anywhere on you PATH. You only need to do this if you want to you the script to interact with a keepasshttp server.
 
 python-keepasshttpc - communicate with a keepasshttp server
 Copyright (C) 2015-2016  Florian Merkel
