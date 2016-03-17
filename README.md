@@ -27,6 +27,7 @@ Note 1: This is your user's `site-packages` path. See [Installing Python Modules
 
 Note 2: This assumes that `~/bin` is on your PATH. You can place the `keepasshttpc.py` script anywhere on you PATH. You only need to do this if you want to you the script to interact with a keepasshttp server.
 
+## License
 python-keepasshttpc - communicate with a keepasshttp server
 Copyright (C) 2015-2016  Florian Merkel
 
