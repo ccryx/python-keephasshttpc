@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     parser_associate = subparsers.add_parser('associate')
     parser_associate.set_defaults(func=(
-        lambda args: print(associate(args.unlock)))
+        lambda args: print(associate()))
     )
 
     parser_get_logins = subparsers.add_parser('get-logins')
